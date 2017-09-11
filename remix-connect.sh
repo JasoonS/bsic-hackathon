@@ -1,0 +1,1 @@
+remixd -S $(pwd)/contracts &
