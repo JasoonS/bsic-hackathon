@@ -19,7 +19,7 @@ contract UserContract is Killable {
     uint public timeOfLastUpdate;
     
     // TODO:: this should eventually go into the hub contract (for global configuration)
-    uint public dailyDepreciationRate //represented as a number out of 10^3 (make this more as needed)
+    uint public dailyDepreciationRate; //represented as a number out of 10^3 (make this more as needed)
 
     uint public dailyAllowance; // variable stores the users daily allowance. (more advanced parameters to come)
 
