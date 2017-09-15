@@ -9,6 +9,16 @@ import './UserContract.sol';
 contract hub is Killable {
     bytes32[] identifierHashes;
     mapping(bytes32 => address) contracts;
+    mapping(address => bool) contractExists;
+    
+    modifier onlyIfContract(address userContract) {
+        if(contractExists[userContract] != true) throw;
+        _;
+    }
+    
+    event LogNewUserContract(address contractAddress,bytes32 _identifierHash, uint _dailyAllowance, uint _dailyDepreciationRate);
+    event LogKillUserContract(address sender, address contractAddress);
+    event LogContractNewOwner(address contractAddress, address newOwner);
     
     /**
     @notice gets the length of the user array
@@ -19,7 +29,7 @@ contract hub is Killable {
     constant
     returns (uint lengthOfIdentifiers)
     {
-     return identifierHashes.length;  
+         return identifierHashes.length;  
     }
     
     /**
@@ -29,23 +39,64 @@ contract hub is Killable {
     @param _dailyDepreciationRate the numerator for the deprecation function. 
     @return returns the address of the new contract
     */
-    function newUserContract(bytes32 _identifierHash, uint _dailyAllowance, uint _dailyDepreciationRate) 
+    function newUserContract(bytes32 _identifierHash,
+        uint _dailyAllowance,
+        uint _dailyDepreciationRate) 
     returns (address newContract) {
         UserContract trustedContract = new UserContract(_identifierHash,_dailyAllowance,_dailyDepreciationRate);
         identifierHashes.push(_identifierHash);
+        contractExists[trustedContract] = true;
         contracts[_identifierHash] = trustedContract;
+        LogNewUserContract(trustedContract,_identifierHash,_dailyAllowance, _dailyDepreciationRate);
         return trustedContract;
     }
     
+    // Pass-through Admin Controls
     
+    /**
+     * @dev Changges the owner of the contract
+     * @param contractAddress the address of the contract
+     * @param newOwner is the new owners address
+     * @return boolean value of whether it was successful
+     */
+    function changeContractOwner(address contractAddress, address newOwner) 
+        onlyOwner
+        onlyIfContract(contractAddress)
+        returns(bool success)
+    {
+        UserContract trustedContract = UserContract(contractAddress);
+        LogContractNewOwner(contractAddress,newOwner);
+        return(trustedContract.changeOwner(newOwner)); 
+    }
+
     /**
      * @dev kills the contract at the address.
      * @param contractAddress is the address of the contract you want to remove
      * @return boolean value of whether it was successful
      */
-    function killContract(address contractAddress) returns (bool succcess) {
+    function killContract(address contractAddress) 
+        returns (bool succcess) 
+    {
         UserContract trustedContract = UserContract(contractAddress);
         trustedContract.kill();
+        LogKillUserContract(msg.sender, contractAddress);
+        contractExists[contractAddress] = false;
+        //either the code will throw an error or return true
+        return true;
+    }
+    
+    /**
+     * @dev kills the contract owned by the identifier.
+     * @param identifier is the person whos contract you want to identifier
+     * @return boolean value of whether it was successful
+     */
+    function killContractByIdentifier(bytes32 identifier) 
+        returns (bool succcess) 
+    {
+        address contactAddress = contracts[identifier];
+        UserContract trustedContract = UserContract(contactAddress);
+        trustedContract.kill();
+        LogKillUserContract(msg.sender, trustedContract);
         //either the code will throw an error or return true
         return true;
     }

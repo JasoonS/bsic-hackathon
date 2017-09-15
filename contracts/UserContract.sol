@@ -5,7 +5,9 @@ import './zeppelin/lifecycle/Killable.sol';
 contract UserContract is Killable {
     // a hash of some identifier to deter people from creating multiple accounts. (could be a hash of their ID number, or even some other biometric information)
     bytes32 public identifierHash;
-
+    
+    event LogNewOwner(address sender, address contractAddress, address newOwner);
+    
     uint public balance; // the balance of this user.
 
     // TODO:: Write your own 'safemath' library that works on int (not only uint)
@@ -59,5 +61,15 @@ contract UserContract is Killable {
     {
         require(timeNow > timeOfLastUpdate);
         return (timeNow - timeOfLastUpdate)/86400;//86400 = 24*60*60
+    }
+    
+    function changeOwner(address newOwner)
+    onlyOwner
+    returns (bool success)
+    {
+        if(newOwner == 0) throw;
+        LogNewOwner(msg.sender, owner, newOwner);
+        owner = newOwner;
+        return true;
     }
 }
